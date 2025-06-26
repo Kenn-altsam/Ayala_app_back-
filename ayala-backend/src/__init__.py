@@ -1,3 +1,0 @@
-"""
-Ayala Foundation API package
-""" 

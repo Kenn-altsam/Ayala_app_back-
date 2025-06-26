@@ -13,6 +13,7 @@ src/
 ├── auth/           # Authentication and authorization
 ├── companies/      # Company-related functionality
 ├── locations/      # Location-based services
+├── ai_conversation/# AI conversation and natural language processing
 ├── core/           # Core utilities and shared components
 └── main.py        # Application entry point
 ```
@@ -139,7 +140,8 @@ src/
 ## Data Processing and Storage
 
 ### Data Sources
-- Maintain separate parsers for each data source (kazdata, statsnet)
+- Parse data from company websites and save to PostgreSQL database
+- Maintain separate parsers for each data source (kazdata, statsnet, web scraping)
 - Document data source specifics and update frequency
 - Implement error handling for source-specific issues
 - Track data source versions and updates
@@ -171,7 +173,6 @@ CREATE TABLE companies (
     name VARCHAR(255) NOT NULL,
     bin VARCHAR(12),
     registration_date DATE,
-    status VARCHAR(50),
     company_type VARCHAR(50),
     employee_count INTEGER,
     revenue_range VARCHAR(50),
@@ -215,8 +216,7 @@ CREATE TABLE locations (
     city VARCHAR(100),
     address TEXT,
     postal_code VARCHAR(10),
-    coordinates POINT,
-    is_primary BOOLEAN DEFAULT false,
+    coordinates POINT DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_company
         FOREIGN KEY(company_id)
@@ -272,101 +272,7 @@ CREATE INDEX idx_location_coordinates ON locations USING GIST(coordinates);
 
 ## Database Migrations
 
-### Migration Structure
-```
-migrations/
-├── env.py              # Migration environment configuration
-├── script.py.mako      # Migration script template
-└── versions/          # Migration version files
-    ├── 2024_03_19_initial.py        # Initial schema
-    └── YYYY_MM_DD_description.py     # Subsequent migrations
-```
-
-### Migration Naming Convention
-- Use date-based prefixes: `YYYY_MM_DD_`
-- Follow with descriptive slug: `add_tax_info`, `update_contact_fields`
-- Full example: `2024_03_19_add_social_media_fields.py`
-
-### Migration Guidelines
-- Each migration should be atomic and focused
-- Include both upgrade and downgrade paths
-- Document complex migrations with comments
-- Test migrations on a copy of production data
-- Back up database before applying migrations
-- Run migrations during low-traffic periods
-
-### Database Schema Updates
-
-#### Company Table Fields
-```sql
-CREATE TABLE companies (
-    -- Basic Information
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    bin VARCHAR(12),
-    registration_date DATE,
-    status VARCHAR(50),
-    company_type VARCHAR(50),
-    employee_count INTEGER,
-    revenue_range VARCHAR(50),
-    industry VARCHAR(100),
-
-    -- Contact Information
-    website VARCHAR(255),
-    phone VARCHAR(50),
-    email VARCHAR(255),
-    description TEXT,
-
-    -- Social Media and Contact Verification
-    social_media JSONB DEFAULT '{}',
-    has_social_media BOOLEAN DEFAULT FALSE,
-    has_website BOOLEAN DEFAULT FALSE,
-    has_contact_info BOOLEAN DEFAULT FALSE,
-
-    -- Tax Information
-    annual_tax_paid FLOAT,
-    tax_reporting_year INTEGER,
-    tax_compliance_score FLOAT,
-    last_tax_update DATE,
-
-    -- Sponsorship Information
-    past_donations TEXT,
-    sponsorship_interests TEXT,
-
-    -- Timestamps
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Indexes for Efficient Filtering
-CREATE INDEX idx_company_tax_paid ON companies(annual_tax_paid);
-CREATE INDEX idx_company_tax_year ON companies(tax_reporting_year);
-CREATE INDEX idx_company_has_website ON companies(has_website);
-CREATE INDEX idx_company_has_social_media ON companies(has_social_media);
-CREATE INDEX idx_company_has_contact_info ON companies(has_contact_info);
-```
-
-### Data Import Process
-1. Parse source data from CSV files
-2. Validate and normalize data
-3. Calculate derived fields:
-   - has_website: Based on valid website URL
-   - has_social_media: Based on social media links
-   - has_contact_info: Based on email/phone presence
-   - tax_compliance_score: Based on tax payment history
-4. Apply data transformations
-5. Batch import using upsert operations
-
-### Data Quality Rules
-- Validate BIN (Business Identification Number) format
-- Normalize phone numbers to standard format
-- Validate email addresses
-- Verify website URLs
-- Standardize company names
-- Validate tax information
-- Normalize monetary values
-
-### Migration Commands
+### Basic Commands
 ```bash
 # Create new migration
 alembic revision --autogenerate -m "description"
@@ -376,18 +282,13 @@ alembic upgrade head
 
 # Rollback migration
 alembic downgrade -1
-
-# View migration history
-alembic history --verbose
 ```
 
-### Migration Testing
-- Create test database for migration testing
-- Verify upgrade and downgrade paths
-- Test data integrity after migration
-- Validate indexes and constraints
-- Measure migration performance
-- Document any manual intervention needed
+### Guidelines
+- Use descriptive migration names
+- Test migrations before applying to production
+- Include both upgrade and downgrade paths
+- Back up database before major migrations
 
 ## API Endpoints for Frontend Integration
 
@@ -461,7 +362,6 @@ Response: {
   fund_email: string,
   conversation_state: object,
   created_at: string,
-  updated_at: string
 }
 
 // Get Fund Profile
@@ -474,7 +374,6 @@ Response: {
   fund_email: string,
   conversation_state: object,
   created_at: string,
-  updated_at: string
 }
 
 // AI Conversation
@@ -547,7 +446,6 @@ Response: {
   has_contact_info: boolean,
   annual_tax_paid: number,
   tax_reporting_year: number,
-  tax_compliance_score: number,
   last_tax_update: string,
   past_donations: string,
   sponsorship_interests: string,

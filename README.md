@@ -1,286 +1,181 @@
 # Ayala Foundation Backend API
 
-A FastAPI-based backend service for the Ayala Foundation charity fund management system. This API helps charity funds discover companies and their relevant data based on geographical location and AI-powered natural language input.
+A FastAPI backend service that helps charity foundations discover companies and sponsorship opportunities through AI-powered conversations.
 
-## 🏗️ Architecture
+## Features
 
-- **FastAPI**: Modern, fast web framework for building APIs
-- **PostgreSQL**: Primary database with PostGIS for geographic queries
-- **Redis**: Caching layer for improved performance
-- **Docker**: Containerization for consistent deployment
-- **Alembic**: Database migration management
+- 🤖 AI-powered sponsorship matching using OpenAI
+- 🚀 Fast and modern API built with FastAPI
+- 📝 Comprehensive API documentation with Swagger/OpenAPI
+- 🔄 CORS support for frontend integration
+- ⚡ Async/await for optimal performance
 
-## 🚀 Quick Start
+## Project Structure
 
-### Prerequisites
-
-- Docker and Docker Compose
-- Server with minimum 2GB RAM and 20GB disk space
-
-### Automated Setup
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd Ayala_app_back
+```
+src/
+├── main.py                 # FastAPI application entry point
+├── core/
+│   ├── __init__.py
+│   └── config.py          # Configuration management
+└── ai_conversation/
+    ├── __init__.py
+    ├── models.py          # Pydantic models
+    ├── service.py         # OpenAI service
+    └── router.py          # API endpoints
 ```
 
-2. Run the setup script:
-```bash
-chmod +x setup.sh
-./setup.sh
-```
+## Prerequisites
 
-3. The application will be available at:
-- **API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/api/v1/health
+- Python 3.8+
+- OpenAI API key
 
-### Manual Setup
+## Installation
 
-If you prefer manual setup:
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd Ayala_app_back
+   ```
 
-```bash
-# Create environment file
-cp back/.env.example back/.env
-# Edit back/.env with your configuration
+2. **Create virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-# Build and start all services
-docker-compose up -d
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-# Run database migrations
-docker-compose exec api alembic upgrade head
-```
+4. **Environment setup**
+   ```bash
+   cp env.example .env
+   ```
+   
+   Edit `.env` and add your OpenAI API key:
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
 
-## 🔧 Configuration
+## Running the Application
 
-### Environment Variables
+1. **Start the development server**
+   ```bash
+   cd src
+   uvicorn main:app --reload --host localhost --port 8000
+   ```
 
-The setup script creates a `.env` file in the `back/` directory. Update it for production:
+2. **Access the API**
+   - API Base URL: http://localhost:8000
+   - Interactive API docs: http://localhost:8000/docs
+   - ReDoc documentation: http://localhost:8000/redoc
 
-```env
-# Database Configuration
-POSTGRES_SERVER=postgres
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_secure_password_here
-POSTGRES_DB=ayala_foundation
-POSTGRES_PORT=5432
+## API Endpoints
 
-# Redis Configuration
-REDIS_URL=redis://redis:6379/0
+### Core Endpoints
 
-# Security (CHANGE THESE!)
-SECRET_KEY=your-super-secure-secret-key
-JWT_SECRET_KEY=your-super-secure-jwt-key
+- `GET /` - API health check
+- `GET /health` - Detailed health status
 
-# OpenAI Configuration (optional)
-OPENAI_API_KEY=your-openai-api-key-here
+### AI Conversation
 
-# Application Settings
-PROJECT_NAME=Ayala Foundation API
-VERSION=1.0.0
-```
+- `POST /api/v1/funds/conversation` - Send message to AI assistant
+- `GET /api/v1/funds/conversation/health` - AI service health check
 
-### Database Connection
+## Usage Examples
 
-The application connects to PostgreSQL running in Docker with these settings:
-- **Host**: postgres (container name)
-- **Port**: 5432
-- **Username**: postgres
-- **Database**: ayala_foundation
-
-## 📊 Database
-
-### Migrations
-
-The project uses Alembic for database migrations:
+### AI Conversation
 
 ```bash
-# Create a new migration
-docker-compose exec api alembic revision --autogenerate -m "description"
-
-# Apply migrations
-docker-compose exec api alembic upgrade head
-
-# Rollback migration
-docker-compose exec api alembic downgrade -1
+curl -X POST "http://localhost:8000/api/v1/funds/conversation" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "user_input": "I am looking for tech companies in Almaty that might sponsor education initiatives"
+     }'
 ```
 
-### Schema
-
-Key tables:
-- `users`: User authentication and profiles
-- `funds`: Charity fund information
-- `companies`: Company data with location and contact info
-- `locations`: Geographic data for companies
-
-## 🌐 API Endpoints
-
-### Authentication
-- `POST /api/v1/auth/token` - Login
-- `POST /api/v1/auth/register` - Register new user
-- `POST /api/v1/auth/password-reset-request` - Request password reset
-- `POST /api/v1/auth/password-reset` - Reset password
-
-### Fund Management
-- `POST /api/v1/funds/profile` - Create fund profile
-- `GET /api/v1/funds/profile` - Get fund profile
-- `POST /api/v1/funds/conversation` - AI conversation for fund setup
-
-### Company Search
-- `GET /api/v1/companies/search` - Search companies
-- `GET /api/v1/companies/{id}` - Get company details
-- `GET /api/v1/companies/region/{region}` - Get companies by region
-- `GET /api/v1/companies/suggest` - AI-powered company suggestions
-
-### Health Check
-- `GET /api/v1/health` - Service health status
-
-## 🔄 Caching
-
-Redis is used for caching to improve performance:
-
-- **Company search results**: Cached for 1 hour
-- **Geographic queries**: Cached for 2 hours
-- **AI suggestions**: Cached for 30 minutes
-
-Cache keys follow the pattern: `{feature}:{hash_of_parameters}`
-
-## 🧪 Testing
-
-Run tests using Docker:
-
-```bash
-# Run tests inside container
-docker-compose exec api pytest
-
-# Run with coverage
-docker-compose exec api pytest --cov=src tests/
+**Response:**
+```json
+{
+  "status": "success",
+  "data": {
+    "message": "I'd be happy to help you find tech companies in Almaty interested in education sponsorship..."
+  },
+  "message": "Conversation message processed successfully"
+}
 ```
 
-## 📦 Production Deployment
+## Configuration
 
-### With Nginx (Recommended)
+Environment variables (in `.env` file):
 
-```bash
-# Start with Nginx reverse proxy
-docker-compose --profile production up -d
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key (required) | - |
+| `HOST` | Server host | localhost |
+| `PORT` | Server port | 8000 |
+| `DEBUG` | Debug mode | True |
+| `ALLOWED_ORIGINS` | CORS allowed origins | http://localhost:3000,http://127.0.0.1:3000 |
+
+## Development
+
+### Code Style
+
+The project follows:
+- PEP 8 for Python code style
+- Type hints for all functions
+- Comprehensive docstrings
+- Modular architecture with clear separation
+
+### Adding New Features
+
+1. Create new modules in appropriate directories
+2. Follow the established patterns for models, services, and routers
+3. Update the main.py to include new routers
+4. Add proper error handling and logging
+
+## API Response Format
+
+All API responses follow this standard format:
+
+```json
+{
+  "status": "success|error",
+  "data": { ... },
+  "message": "Human-readable message"
+}
 ```
 
-This includes:
-- Nginx reverse proxy on port 80
-- SSL termination support
-- Production-optimized settings
+## Error Handling
 
-### Server Requirements
+The API includes comprehensive error handling for:
 
-- **CPU**: 2+ cores
-- **RAM**: 4GB+ recommended
-- **Disk**: 20GB+ SSD
-- **OS**: Ubuntu 20.04+ or CentOS 8+
-- **Ports**: 80, 443, 8000
+- Invalid input validation
+- OpenAI API errors
+- Rate limiting
+- Authentication errors
+- Network issues
 
-### SSL Setup
+## Future Enhancements
 
-```bash
-# Install certbot
-sudo apt install certbot python3-certbot-nginx
+This is a minimal version. Planned additions include:
 
-# Get SSL certificate
-sudo certbot --nginx -d your-domain.com
+- User authentication and authorization
+- Company database integration
+- Advanced AI conversation state management
+- Location-based company search
+- Comprehensive company profiles
+- PostgreSQL database integration
 
-# Auto-renewal
-echo "0 12 * * * /usr/bin/certbot renew --quiet" | sudo crontab -
-```
+## Contributing
 
-## 🔒 Security
+1. Follow the existing code style and patterns
+2. Add proper type hints and docstrings
+3. Test your changes thoroughly
+4. Update documentation as needed
 
-- JWT-based authentication
-- Password hashing with bcrypt
-- Environment variable configuration
-- CORS protection
-- Security headers via Nginx
-- **⚠️ Change default passwords and secret keys in production!**
+## License
 
-## 📈 Monitoring & Management
-
-### Health Checks
-
-```bash
-# Check service status
-docker-compose ps
-
-# View logs
-docker-compose logs -f api
-
-# Check resource usage
-docker stats
-```
-
-### Database Backup
-
-```bash
-# Backup database
-docker-compose exec postgres pg_dump -U postgres ayala_foundation > backup_$(date +%Y%m%d).sql
-
-# Restore database
-cat backup.sql | docker-compose exec -T postgres psql -U postgres ayala_foundation
-```
-
-### Common Commands
-
-```bash
-# Restart API service
-docker-compose restart api
-
-# Update application
-git pull
-docker-compose build api
-docker-compose up -d
-
-# View application logs
-docker-compose logs -f api
-
-# Scale API instances
-docker-compose up -d --scale api=3
-```
-
-## 🗂️ Project Structure
-
-```
-Ayala_app_back/
-├── back/
-│   ├── src/
-│   │   ├── auth/          # Authentication module
-│   │   ├── companies/     # Company management
-│   │   ├── funds/         # Fund management
-│   │   ├── core/          # Core utilities
-│   │   └── main.py        # FastAPI application
-│   ├── migrations/        # Database migrations
-│   ├── parser/           # Data parsing utilities
-│   ├── Dockerfile        # Container definition
-│   └── requirements.txt  # Python dependencies
-├── docker-compose.yml    # Docker services configuration
-├── nginx.conf           # Nginx configuration
-├── setup.sh             # Automated setup script
-└── README.md           # This file
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test with `docker-compose exec api pytest`
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🔗 Links
-
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Redis Documentation](https://redis.io/documentation)
-- [Docker Documentation](https://docs.docker.com/) 
+[License information here] 
