@@ -125,3 +125,5 @@ temp/
 # Backup files
 *.bak
 *.backup 
+
+DS_Store
