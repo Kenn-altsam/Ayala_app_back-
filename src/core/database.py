@@ -57,7 +57,7 @@ def init_database():
     """
     try:
         # Import all models to register them with Base
-        from ..companies.models import Company, Location
+        from ..companies.models import Company
         from ..auth.models import User
         from ..funds.models import FundProfile
         
