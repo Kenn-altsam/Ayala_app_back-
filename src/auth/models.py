@@ -4,7 +4,7 @@ SQLAlchemy models for user authentication
 Defines the database schema for user accounts and authentication.
 """
 
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Column, String, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -28,14 +28,12 @@ class User(Base):
     # User profile
     full_name = Column(String(255), nullable=False)
     
-    # Account status
-    is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
-    is_superuser = Column(Boolean, default=False)
+    # Status fields
+    is_active = Column(Boolean, default=False, nullable=False)
+    is_verified = Column(Boolean, default=False, nullable=False)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_login = Column(DateTime(timezone=True))
     
     # Relationships

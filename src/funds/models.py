@@ -12,6 +12,48 @@ import uuid
 
 from ..core.database import Base
 
+from pydantic import BaseModel
+from typing import List, Optional
+
+
+class ChatRequest(BaseModel):
+    """Request model for AI conversation"""
+    user_input: str
+    conversation_id: Optional[str] = None
+
+
+class ChatResponse(BaseModel):
+    """Response model for AI conversation"""
+    message: str
+    required_fields: List[str] = []
+    is_complete: bool = False
+
+
+class ConversationInput(BaseModel):
+    """Input model for conversation processing"""
+    user_input: str
+    fund_profile_id: Optional[str] = None
+    conversation_context: Optional[dict] = None
+
+
+class APIResponse(BaseModel):
+    """Standardized API response model"""
+    status: str  # "success" or "error"
+    data: Optional[dict] = None
+    message: str
+    metadata: Optional[dict] = None
+
+
+class CurrentUser(BaseModel):
+    """Model representing the current authenticated user"""
+    id: str
+    email: str
+    full_name: str
+    is_active: bool = True
+    is_verified: bool = False
+    created_at: str
+    fund_profile: Optional[dict] = None
+
 
 class FundProfile(Base):
     """Fund profile model for charity foundation information"""

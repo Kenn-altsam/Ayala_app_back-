@@ -31,13 +31,17 @@ class Settings:
             # Don't raise error immediately, allow app to start for testing
         
         # FastAPI Configuration  
-        self.host: str = os.getenv("HOST", "localhost")
-        self.port: int = int(os.getenv("PORT", "8000"))
+        self.host: str = os.getenv("HOST", "0.0.0.0")  # Allow external connections
+        self.port: int = int(os.getenv("PORT", "8000"))  # Changed to 8000 to match frontend
         self.debug: bool = os.getenv("DEBUG", "True").lower() == "true"
         
-        # CORS Configuration
-        origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
-        self.allowed_origins: List[str] = [origin.strip() for origin in origins_str.split(",")]
+        # CORS Configuration - Allow all origins in development
+        # For production, specify exact domains
+        origins_str = os.getenv("ALLOWED_ORIGINS", "*")  # Allow all origins for development
+        if origins_str == "*":
+            self.allowed_origins: List[str] = ["*"]
+        else:
+            self.allowed_origins: List[str] = [origin.strip() for origin in origins_str.split(",")]
         
         # Database Configuration
         self.database_url: str = os.getenv("DATABASE_URL", "")
