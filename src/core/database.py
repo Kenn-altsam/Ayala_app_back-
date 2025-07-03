@@ -4,14 +4,19 @@ Database connection and session management for Ayala Foundation Backend
 Handles PostgreSQL connection, session management, and database initialization.
 """
 
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
 from typing import Generator
 import logging
+import os
+from dotenv import load_dotenv
 
 from .config import get_settings
+
+# Load environment variables from .env file for local development
+load_dotenv()
 
 # Get settings
 settings = get_settings()
@@ -90,8 +95,8 @@ def test_database_connection() -> bool:
     """
     try:
         db = SessionLocal()
-        # Simple query to test connection
-        db.execute("SELECT 1")
+        # Use SQLAlchemy text construct for raw SQL (SQLAlchemy 2.x requirement)
+        db.execute(text("SELECT 1"))
         db.close()
         logging.info("Database connection test successful")
         return True

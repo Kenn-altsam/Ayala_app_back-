@@ -39,9 +39,15 @@ class Settings:
         # For production, specify exact domains
         origins_str = os.getenv("ALLOWED_ORIGINS", "*")  # Allow all origins for development
         if origins_str == "*":
+            # Very permissive CORS for mobile development - allows any origin
             self.allowed_origins: List[str] = ["*"]
         else:
             self.allowed_origins: List[str] = [origin.strip() for origin in origins_str.split(",")]
+        
+        # Additional mobile-friendly settings
+        self.allow_credentials: bool = os.getenv("ALLOW_CREDENTIALS", "true").lower() == "true"
+        self.allow_methods: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+        self.allow_headers: List[str] = ["*"]
         
         # Database Configuration
         self.database_url: str = os.getenv("DATABASE_URL", "")

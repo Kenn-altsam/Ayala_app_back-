@@ -127,3 +127,7 @@ temp/
 *.backup 
 
 DS_Store
+
+migration_data.sql
+
+specific_migration.sql

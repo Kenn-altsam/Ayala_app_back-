@@ -46,15 +46,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
-origins = settings.allowed_origins
-
+# Configure CORS for mobile development
+# Very permissive settings to ensure iPhone/Android apps can connect
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.allowed_origins,
+    allow_credentials=settings.allow_credentials,
+    allow_methods=settings.allow_methods,
+    allow_headers=settings.allow_headers,
+    expose_headers=["*"],  # Allow all response headers to be accessible
 )
 
 # Include routers
@@ -87,4 +87,32 @@ async def health_check():
             "service": "ayala-foundation-backend",
             "version": "1.0.0"
         }
+    }
+
+@app.get("/network-test")
+async def network_test():
+    """Network connectivity test endpoint for mobile debugging"""
+    return {
+        "status": "success",
+        "message": "Network connection working!",
+        "timestamp": "2025-01-03T10:00:00Z",
+        "data": {
+            "cors_enabled": True,
+            "mobile_friendly": True,
+            "server_info": {
+                "host": settings.host,
+                "port": settings.port,
+                "allowed_origins": settings.allowed_origins
+            }
+        }
+    }
+
+@app.get("/test")
+async def simple_test():
+    """Simple test endpoint for iOS app connectivity"""
+    return {
+        "message": "Backend is working!",
+        "server_ip": "192.168.58.253",
+        "port": 8000,
+        "timestamp": "2025-01-03T10:00:00Z"
     } 

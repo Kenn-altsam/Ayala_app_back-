@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  # The Database Service (PostgreSQL)
+  # This section configures the database container itself.
+  db:
+    image: postgres:15
+    container_name: ayala_database  # Changed to a more descriptive name
+    restart: unless-stopped
+    environment:
+      # These variables are used by the postgres image to initialize the database
+      # They are now set to match your .env file.
+      POSTGRES_DB: ${DB_NAME}          # Reads 'Ayala_app_database' from .env
+      POSTGRES_USER: ${DB_USER}        # Reads 'postgres' from .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD}  # Reads 'JT0v3/9TR0c4' from .env
+    ports:
+      # We map host port 5432 to container port 5432 to match your .env
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # The Backend Application Service (FastAPI)
+  # This section configures your Python application container.
+  backend:
+    build: .
+    container_name: ayala_app_back
+    # This ensures the 'db' container is started before the 'backend' container.
+    depends_on:
+      - db
+    # This loads all variables from your .env file into the container's environment
+    env_file:
+      - .env
+    # We MUST override the DB_HOST for the container to connect correctly.
+    environment:
+      # Inside Docker's network, the hostname for the db service is 'db', not 'localhost'.
+      DB_HOST: db
+      # We also reconstruct the DATABASE_URL to use the correct hostname.
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}"
+    ports:
+      # Expose your application on port 8000
+      - "8000:8000"
+    restart: unless-stopped
+
+# This defines the named volume for persistent database data.
+volumes:
+  postgres_data:

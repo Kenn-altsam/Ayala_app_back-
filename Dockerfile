@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy source code
 COPY src/ ./src/
+COPY parser/ ./parser/
 
 # Copy environment example (you'll need to provide actual values)
 COPY env.example .env

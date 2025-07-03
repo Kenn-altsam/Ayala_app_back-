@@ -560,6 +560,12 @@ class OpenAIService:
                         
                 except Exception as e:
                     print(f"❌ Error during company search: {e}")
+                    # Roll back the current database transaction so the session can continue
+                    try:
+                        if db:
+                            db.rollback()
+                    except Exception as rollback_error:
+                        print(f"⚠️ Could not rollback session after error: {rollback_error}")
                     traceback.print_exc()
                     final_message = f"Произошла ошибка при поиске компаний. Пожалуйста, попробуйте еще раз."
             
@@ -568,6 +574,12 @@ class OpenAIService:
                 
         except Exception as e:
             print(f"❌ Critical error during conversation processing: {e}")
+            # Roll back in case the session is in a failed state so that outer callers can continue safely
+            try:
+                if db:
+                    db.rollback()
+            except Exception as rollback_error:
+                print(f"⚠️ Could not rollback session after critical error: {rollback_error}")
             traceback.print_exc()
             final_message = "Извините, произошла техническая ошибка. Попробуйте переформулировать ваш вопрос."
 

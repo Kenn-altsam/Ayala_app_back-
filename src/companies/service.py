@@ -253,13 +253,13 @@ class CompanyService:
             "krp": company.KRP,
             "size": company.Size,
 
-            # Tax information
-            "annual_tax_paid": company.annual_tax_paid,
-            "tax_2020": company.tax_2020,
-            "tax_2021": company.tax_2021,
-            "tax_2022": company.tax_2022,
-            "tax_2023": company.tax_2023,
-            "tax_2024": company.tax_2024,
-            "tax_2025": company.tax_2025,
-            "last_tax_update": company.last_tax_update.isoformat() if company.last_tax_update else None,
+            # Tax information (may be missing if the DB wasn't migrated yet)
+            "annual_tax_paid": getattr(company, "annual_tax_paid", None),
+            "tax_2020": getattr(company, "tax_2020", None),
+            "tax_2021": getattr(company, "tax_2021", None),
+            "tax_2022": getattr(company, "tax_2022", None),
+            "tax_2023": getattr(company, "tax_2023", None),
+            "tax_2024": getattr(company, "tax_2024", None),
+            "tax_2025": getattr(company, "tax_2025", None),
+            "last_tax_update": getattr(company, "last_tax_update", None).isoformat() if getattr(company, "last_tax_update", None) else None,
         } 

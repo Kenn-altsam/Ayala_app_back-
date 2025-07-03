@@ -7,12 +7,13 @@ Handles user authentication, registration, and token management endpoints.
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from ..core.database import get_db
 from ..core.config import get_settings
@@ -104,8 +105,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 def authenticate_user(db: Session, email: str, password: str):
-    """Authenticate user with email and password"""
-    user = db.query(User).filter(User.email == email).first()
+    """Authenticate user with email and password (case-insensitive)."""
+    normalized_email = email.lower()
+    user = (
+        db.query(User)
+        .filter(User.email.ilike(normalized_email))  # case-insensitive comparison
+        .first()
+    )
     if not user:
         return False
     if not verify_password(password, user.hashed_password):
@@ -167,76 +173,125 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """Login endpoint that returns user data along with token"""
-    user = authenticate_user(db, form_data.username, form_data.password)
+async def login(request: Request, db: Session = Depends(get_db)):
+    """Login endpoint that works with both `application/x-www-form-urlencoded` (OAuth2) and `application/json` payloads.
+
+    Expected fields:
+    - username (or email): user's email address
+    - password: user's password
+    """
+
+    content_type = request.headers.get("content-type", "").lower()
+
+    if "application/json" in content_type:
+        data = await request.json()
+        username = data.get("username") or data.get("email") or ""
+        password = data.get("password") or ""
+    else:
+        # Fallback to form data (OAuth2PasswordRequestForm compatible)
+        form = await request.form()
+        username = form.get("username") or form.get("email") or ""
+        password = form.get("password") or ""
+
+    user = authenticate_user(db, username, password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # Update last login
+
+    # Update last login timestamp
     user.last_login = datetime.utcnow()
     db.commit()
-    
+
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    
-    # Create user response
+
     user_response = UserResponse(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
         is_active=user.is_active,
         is_verified=user.is_verified,
-        created_at=user.created_at
+        created_at=user.created_at,
     )
-    
+
     return AuthResponse(
         access_token=access_token,
         token_type="bearer",
-        user=user_response
+        user=user_response,
     )
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=AuthResponse)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    normalized_email = user_data.email.lower()
+    existing_user = db.query(User).filter(User.email.ilike(normalized_email)).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
     
-    # Create new user
+    # --- START of an important debugging step ---
+    # Print incoming user data for debugging purposes.
+    print(f"Attempting to register user with data: {user_data.dict()}")
+    # --- END of debugging step ---
+
     hashed_password = get_password_hash(user_data.password)
+
     db_user = User(
-        email=user_data.email,
+        email=normalized_email,
         hashed_password=hashed_password,
         full_name=user_data.full_name,
-        
-        is_active=True,    
-        is_verified=False 
+        is_active=True,  # New users should be active by default
+        is_verified=False  # Verification handled separately
     )
-    
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    # Create user response with proper UUID to string conversion
-    return UserResponse(
+
+    try:
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+    except IntegrityError as e:
+        # Roll back transaction and surface a conflict error if the email is already used
+        db.rollback()
+        print(f"DATABASE INTEGRITY ERROR: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An error occurred. This email might already be in use or data is invalid."
+        )
+    except Exception as e:
+        # Catch-all for unexpected errors
+        db.rollback()
+        print(f"UNEXPECTED ERROR DURING REGISTRATION: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not create user account."
+        )
+
+    # Автоматически создаём токен, чтобы клиенту не нужно было выполнять отдельный запрос /auth/token
+    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+    access_token = create_access_token(
+        data={"sub": db_user.email}, expires_delta=access_token_expires
+    )
+
+    user_response = UserResponse(
         id=str(db_user.id),
         email=db_user.email,
         full_name=db_user.full_name,
         is_active=db_user.is_active,
         is_verified=db_user.is_verified,
         created_at=db_user.created_at
+    )
+
+    return AuthResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user=user_response,
     )
 
 
